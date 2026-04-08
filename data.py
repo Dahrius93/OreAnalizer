@@ -90,9 +90,15 @@ def apply_filters(df, reparti, wbs_list, persone, act_types, date_start=None, da
     if act_types:
         filtered = filtered[filtered[COL_ACT_TYPE].isin(act_types)]
     if date_start is not None:
-        filtered = filtered[filtered[COL_DATE] >= pd.Timestamp(date_start)]
+        try:
+            filtered = filtered[filtered[COL_DATE] >= pd.Timestamp(date_start)]
+        except Exception:
+            pass
     if date_end is not None:
-        filtered = filtered[filtered[COL_DATE] <= pd.Timestamp(date_end)]
+        try:
+            filtered = filtered[filtered[COL_DATE] <= pd.Timestamp(date_end)]
+        except Exception:
+            pass
     return filtered
 
 

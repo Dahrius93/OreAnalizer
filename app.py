@@ -149,14 +149,17 @@ def main():
             st.markdown("### 📅 Periodo")
             date_min = df_raw[COL_DATE].min().date()
             date_max = df_raw[COL_DATE].max().date()
-            sel_date_start = st.date_input(
+            _raw_date_start = st.date_input(
                 "Da", value=date_min, min_value=date_min, max_value=date_max,
                 format="DD/MM/YYYY",
             )
-            sel_date_end = st.date_input(
+            _raw_date_end = st.date_input(
                 "A", value=date_max, min_value=date_min, max_value=date_max,
                 format="DD/MM/YYYY",
             )
+            # date_input può restituire None o una tuple su alcune versioni/ambienti
+            sel_date_start = (_raw_date_start[0] if isinstance(_raw_date_start, (list, tuple)) else _raw_date_start) or date_min
+            sel_date_end = (_raw_date_end[-1] if isinstance(_raw_date_end, (list, tuple)) else _raw_date_end) or date_max
 
             st.markdown("---")
 
