@@ -8,7 +8,7 @@ import streamlit as st
 from config import (
     COL_WBS, COL_REPARTO, COL_DATE, COL_PERSON, COL_HOURS,
     COL_DESC, COL_ACT_TYPE, COL_ACT_LABEL, COL_ACT_DETAIL,
-    ACTIVITY_TYPES,
+    ACTIVITY_TYPES, ACTIVITY_ALIASES,
 )
 
 
@@ -23,8 +23,9 @@ def parse_activity_type(desc: str) -> tuple:
 
     desc = desc.strip()
 
-    # Known prefixes sorted longest-first to avoid partial matches
-    known = sorted(ACTIVITY_TYPES.keys(), key=len, reverse=True)
+    # Known prefixes sorted longest-first to avoid partial matches.
+    # Include also legacy aliases so they get recognized before normalization.
+    known = sorted(set(ACTIVITY_TYPES.keys()) | set(ACTIVITY_ALIASES.keys()), key=len, reverse=True)
 
     for prefix in known:
         # Match: PREFIX followed by separator (- or space) or end of string
@@ -46,6 +47,11 @@ def parse_activity_type(desc: str) -> tuple:
     return ("N/D", desc)
 
 
+def normalize_activity_type(act_type: str) -> str:
+    """Normalizza prefissi legacy verso la chiave canonica (es. GES → HW-GES)."""
+    return ACTIVITY_ALIASES.get(act_type.upper(), act_type)
+
+
 @st.cache_data
 def load_and_clean(uploaded_file) -> pd.DataFrame:
     """Load SAP Excel export, drop summary rows, parse activity types."""
@@ -61,9 +67,9 @@ def load_and_clean(uploaded_file) -> pd.DataFrame:
     df[COL_PERSON] = df[COL_PERSON].astype(str).str.strip().str.title()
     df[COL_DESC] = df[COL_DESC].astype(str).str.strip() if COL_DESC in df.columns else ""
 
-    # Parse activity type from description
+    # Parse activity type from description, then normalize legacy aliases
     parsed = df[COL_DESC].apply(parse_activity_type)
-    df[COL_ACT_TYPE] = parsed.apply(lambda x: x[0])
+    df[COL_ACT_TYPE] = parsed.apply(lambda x: normalize_activity_type(x[0]))
     df[COL_ACT_DETAIL] = parsed.apply(lambda x: x[1])
     df[COL_ACT_LABEL] = df[COL_ACT_TYPE].map(
         lambda t: f"{t} — {ACTIVITY_TYPES.get(t, 'Non classificato')}"

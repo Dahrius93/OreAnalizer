@@ -38,10 +38,16 @@ ACTIVITY_TYPES = {
     "ITEC":  "Studi prevendita / Offerta",
     "RD":    "R&D",
     "V":     "Attività varie (archivio, DB, nuovi prodotti)",
-    "GEST":  "Gestione (fornitori, offerte, DOC, manualistica)",
-    "GES":   "Gestione fornitori",
+    "HW-GES": "Gestione fornitori HW",
     "AHW":   "Assistenza hardware",
     "$POST": "Assistenza pagata",
+}
+
+# Alias: prefissi legacy → chiave canonica in ACTIVITY_TYPES.
+# Usato in data.py per normalizzare prefissi vecchi verso quelli nuovi.
+ACTIVITY_ALIASES = {
+    "GES":  "HW-GES",
+    "GEST": "HW-GES",
 }
 
 # Mappa prefisso → colore esadecimale usato nei grafici Plotly.
@@ -59,8 +65,7 @@ TYPE_COLORS = {
     "ITEC":  "#a855f7",
     "RD":    "#6366f1",
     "V":     "#64748b",
-    "GEST":  "#84cc16",
-    "GES":   "#65a30d",
+    "HW-GES": "#84cc16",
     "AHW":   "#0ea5e9",
     "$POST": "#f43f5e",
     "N/D":   "#334155",
