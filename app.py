@@ -75,7 +75,7 @@ st.markdown("""
 def main():
     with st.sidebar:
         st.markdown("## ⏱️ SAP Ore Analyzer")
-        st.markdown("v1.2.0")
+        st.markdown("v1.2.1")
         st.markdown("---")
 
         uploaded_file = st.file_uploader(
@@ -86,74 +86,129 @@ def main():
 
         if uploaded_file is None:
             st.info("Carica un file per iniziare")
-            st.stop()
+            # La welcome page viene mostrata nel contenuto principale sotto
+        else:
+            try:
+                df_raw = load_and_clean(uploaded_file)
+            except Exception as e:
+                st.error(f"Errore nel caricamento: {e}")
+                st.stop()
 
-        try:
-            df_raw = load_and_clean(uploaded_file)
-        except Exception as e:
-            st.error(f"Errore nel caricamento: {e}")
-            st.stop()
+            st.success(f"✅ {len(df_raw)} righe caricate")
+            st.markdown("---")
 
-        st.success(f"✅ {len(df_raw)} righe caricate")
+            # ── FILTRO 1: Reparto (C) ──
+            st.markdown("### 🏭 Reparto")
+            all_reparti = sorted(df_raw[COL_REPARTO].unique())
+            default_reparti = [r for r in ["UTE", "UTES"] if r in all_reparti]
+            sel_reparti = st.multiselect(
+                "Seleziona reparti", options=all_reparti,
+                default=default_reparti if default_reparti else all_reparti,
+                help="Filtra per codice reparto (colonna C)",
+            )
+
+            df_after_rep = df_raw[df_raw[COL_REPARTO].isin(sel_reparti)] if sel_reparti else df_raw
+
+            # ── FILTRO 2: WBS (A) ──
+            st.markdown("### 📋 WBS")
+            all_wbs = sorted(df_after_rep[COL_WBS].unique())
+            sel_wbs = st.multiselect(
+                "Seleziona WBS", options=all_wbs, default=[],
+                help="Lascia vuoto per tutte le WBS del reparto selezionato",
+                placeholder="Tutte le WBS",
+            )
+
+            df_after_wbs = df_after_rep
+            if sel_wbs:
+                df_after_wbs = df_after_rep[df_after_rep[COL_WBS].isin(sel_wbs)]
+
+            # ── FILTRO 3: Tipo Attività (parsed from N) ──
+            st.markdown("### 🏷️ Tipo Attività")
+            all_act_types = sorted(df_after_wbs[COL_ACT_TYPE].unique())
+            sel_act_types = st.multiselect(
+                "Seleziona tipo attività", options=all_act_types, default=[],
+                help="Prefisso attività (SW, HW, RI, ecc.). Lascia vuoto per tutti.",
+                placeholder="Tutti i tipi",
+                format_func=lambda t: f"{t} — {ACTIVITY_TYPES.get(t, '?')}",
+            )
+
+            df_after_act = df_after_wbs
+            if sel_act_types:
+                df_after_act = df_after_wbs[df_after_wbs[COL_ACT_TYPE].isin(sel_act_types)]
+
+            # ── FILTRO 4: Persone (H) ──
+            st.markdown("### 👷 Persone")
+            all_persons = sorted(df_after_act[COL_PERSON].unique())
+            sel_persons = st.multiselect(
+                "Seleziona persone", options=all_persons, default=[],
+                help="Lascia vuoto per tutte le persone",
+                placeholder="Tutte le persone",
+            )
+
+            st.markdown("---")
+
+            # ── TARGET ──
+            st.markdown("### 🎯 Target Ore")
+            target = st.number_input(
+                "Inserisci target (h)", min_value=0.0, value=0.0,
+                step=10.0, format="%.1f",
+                help="Ore budget previste per il confronto",
+            )
+
+    # ── Welcome screen quando nessun file è caricato ──
+    if uploaded_file is None:
+        st.markdown("# ⏱️ SAP Ore Analyzer")
+        st.markdown("Benvenuto! Carica un export SAP per iniziare l'analisi delle ore.")
         st.markdown("---")
 
-        # ── FILTRO 1: Reparto (C) ──
-        st.markdown("### 🏭 Reparto")
-        all_reparti = sorted(df_raw[COL_REPARTO].unique())
-        default_reparti = [r for r in ["UTE", "UTES"] if r in all_reparti]
-        sel_reparti = st.multiselect(
-            "Seleziona reparti", options=all_reparti,
-            default=default_reparti if default_reparti else all_reparti,
-            help="Filtra per codice reparto (colonna C)",
-        )
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown("""
+            <div class="kpi-card">
+                <h3>Passo 1</h3>
+                <p style="font-size:2rem">📂</p>
+                <div class="sub">Carica il file Excel esportato da SAP dalla barra laterale</div>
+            </div>""", unsafe_allow_html=True)
+        with col2:
+            st.markdown("""
+            <div class="kpi-card">
+                <h3>Passo 2</h3>
+                <p style="font-size:2rem">🔍</p>
+                <div class="sub">Applica i filtri per Reparto, WBS, Tipo Attività e Persone</div>
+            </div>""", unsafe_allow_html=True)
+        with col3:
+            st.markdown("""
+            <div class="kpi-card">
+                <h3>Passo 3</h3>
+                <p style="font-size:2rem">📊</p>
+                <div class="sub">Analizza i grafici e scarica il report Excel</div>
+            </div>""", unsafe_allow_html=True)
 
-        df_after_rep = df_raw[df_raw[COL_REPARTO].isin(sel_reparti)] if sel_reparti else df_raw
+        st.markdown("")
+        st.markdown("---")
+        st.markdown("### 📋 Cosa puoi fare con questa app")
 
-        # ── FILTRO 2: WBS (A) ──
-        st.markdown("### 📋 WBS")
-        all_wbs = sorted(df_after_rep[COL_WBS].unique())
-        sel_wbs = st.multiselect(
-            "Seleziona WBS", options=all_wbs, default=[],
-            help="Lascia vuoto per tutte le WBS del reparto selezionato",
-            placeholder="Tutte le WBS",
-        )
-
-        df_after_wbs = df_after_rep
-        if sel_wbs:
-            df_after_wbs = df_after_rep[df_after_rep[COL_WBS].isin(sel_wbs)]
-
-        # ── FILTRO 3: Tipo Attività (parsed from N) ──
-        st.markdown("### 🏷️ Tipo Attività")
-        all_act_types = sorted(df_after_wbs[COL_ACT_TYPE].unique())
-        sel_act_types = st.multiselect(
-            "Seleziona tipo attività", options=all_act_types, default=[],
-            help="Prefisso attività (SW, HW, RI, ecc.). Lascia vuoto per tutti.",
-            placeholder="Tutti i tipi",
-            format_func=lambda t: f"{t} — {ACTIVITY_TYPES.get(t, '?')}",
-        )
-
-        df_after_act = df_after_wbs
-        if sel_act_types:
-            df_after_act = df_after_wbs[df_after_wbs[COL_ACT_TYPE].isin(sel_act_types)]
-
-        # ── FILTRO 4: Persone (H) ──
-        st.markdown("### 👷 Persone")
-        all_persons = sorted(df_after_act[COL_PERSON].unique())
-        sel_persons = st.multiselect(
-            "Seleziona persone", options=all_persons, default=[],
-            help="Lascia vuoto per tutte le persone",
-            placeholder="Tutte le persone",
-        )
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.markdown("""
+**Analisi disponibili:**
+- **KPI principali** — ore totali, persone, WBS attive, media giornaliera
+- **Target vs Reale** — confronta le ore consuntivate con il budget
+- **Donut per tipo attività** — distribuzione percentuale SW, HW, RI, ecc.
+- **Stacked bar** — breakdown per persona e tipo attività
+""")
+        with col_b:
+            st.markdown("""
+**Visualizzazioni avanzate:**
+- **Heatmap Persone × WBS** — identifica chi lavora su cosa
+- **Heatmap Persone × Tipo Attività** — distribuzione del lavoro per categoria
+- **Ore per Persona** — confronto diretto tra le risorse
+- **Export Excel** — report completo con grafici incorporati
+""")
 
         st.markdown("---")
-
-        # ── TARGET ──
-        st.markdown("### 🎯 Target Ore")
-        target = st.number_input(
-            "Inserisci target (h)", min_value=0.0, value=0.0,
-            step=10.0, format="%.1f",
-            help="Ore budget previste per il confronto",
-        )
+        st.info("**Formato atteso:** file `.xlsx` o `.xls` esportato da SAP con colonne WBS, Reparto, Data, Persona, Ore, Descrizione e Tipo Attività.")
+        st.stop()
 
     # ── Apply all filters ──
     df_filtered = apply_filters(df_raw, sel_reparti, sel_wbs, sel_persons, sel_act_types)
