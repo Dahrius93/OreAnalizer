@@ -145,10 +145,17 @@ def generate_excel_report(
         for label, fig in figures.items():
             if fig is not None:
                 try:
-                    img_bytes = fig.to_image(format="png", width=1000, height=500, scale=2)
+                    # Imposta sfondo bianco per leggibilità in Excel
+                    fig_export = fig
+                    fig_export.update_layout(
+                        paper_bgcolor="#ffffff",
+                        plot_bgcolor="#ffffff",
+                        font_color="#000000",
+                    )
+                    img_bytes = fig_export.to_image(format="png", width=1000, height=500, scale=2)
                     img_buf = io.BytesIO(img_bytes)
                     ws_charts.write(row_offset, 0, label, wb.add_format({"bold": True}))
-                    ws_charts.insert_image(row_offset + 1, 0, label,
+                    ws_charts.insert_image(row_offset + 1, 0, "",
                                            {"image_data": img_buf, "x_scale": 0.5, "y_scale": 0.5})
                     row_offset += 28
                 except Exception:
