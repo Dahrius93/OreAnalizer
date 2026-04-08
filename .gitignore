@@ -1,0 +1,29 @@
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Streamlit cache
+.streamlit/
+
+# File Excel SAP e report generati
+*.xlsx
+*.xls
+
+# Dati sensibili / file di test locali
+data/
+sample/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
