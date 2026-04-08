@@ -17,6 +17,7 @@ from charts import (
     make_hours_by_person_chart, make_donut_activity, make_stacked_bar_activity,
 )
 from report import generate_excel_report
+from persistence import save_uploaded_file, load_saved_file, save_filters, load_filters, clear_saved_data
 
 # ──────────────────────────────────────────────
 # CONFIG
@@ -73,6 +74,9 @@ st.markdown("""
 # MAIN APP
 # ══════════════════════════════════════════════
 def main():
+    # ── Carica filtri salvati (usati come default nei widget) ──
+    saved = load_filters()
+
     with st.sidebar:
         st.markdown("## ⏱️ SAP Ore Analyzer")
         st.markdown("v1.2.3")
@@ -84,9 +88,19 @@ def main():
             help="File Excel esportato da SAP con le ore giornaliere",
         )
 
+        # ── Se nessun file è caricato ora, prova a usare quello salvato ──
+        using_saved_file = False
         if uploaded_file is None:
-            st.info("Carica un file per iniziare")
-            # La welcome page viene mostrata nel contenuto principale sotto
+            saved_bytes = load_saved_file()
+            if saved_bytes is not None:
+                import io
+                uploaded_file = io.BytesIO(saved_bytes)
+                using_saved_file = True
+            else:
+                st.info("Carica un file per iniziare")
+
+        if uploaded_file is None:
+            pass  # welcome page mostrata sotto
         else:
             try:
                 df_raw = load_and_clean(uploaded_file)
@@ -94,16 +108,31 @@ def main():
                 st.error(f"Errore nel caricamento: {e}")
                 st.stop()
 
+            # Salva il file su disco solo quando viene caricato dall'utente
+            if not using_saved_file:
+                save_uploaded_file(uploaded_file)
+
+            if using_saved_file:
+                st.info("📂 File ripristinato dall'ultima sessione")
             st.success(f"✅ {len(df_raw)} righe caricate")
+
+            col_clear, _ = st.columns([1, 1])
+            with col_clear:
+                if st.button("🗑️ Dimentica file", use_container_width=True):
+                    clear_saved_data()
+                    st.cache_data.clear()
+                    st.rerun()
+
             st.markdown("---")
 
             # ── FILTRO 1: Reparto (C) ──
             st.markdown("### 🏭 Reparto")
             all_reparti = sorted(df_raw[COL_REPARTO].unique())
-            default_reparti = [r for r in ["UTE", "UTES"] if r in all_reparti]
+            default_reparti = saved.get("reparti") or [r for r in ["UTE", "UTES"] if r in all_reparti] or all_reparti
+            default_reparti = [r for r in default_reparti if r in all_reparti]
             sel_reparti = st.multiselect(
                 "Seleziona reparti", options=all_reparti,
-                default=default_reparti if default_reparti else all_reparti,
+                default=default_reparti,
                 help="Filtra per codice reparto (colonna C)",
             )
 
@@ -112,8 +141,9 @@ def main():
             # ── FILTRO 2: WBS (A) ──
             st.markdown("### 📋 WBS")
             all_wbs = sorted(df_after_rep[COL_WBS].unique())
+            default_wbs = [w for w in saved.get("wbs", []) if w in all_wbs]
             sel_wbs = st.multiselect(
-                "Seleziona WBS", options=all_wbs, default=[],
+                "Seleziona WBS", options=all_wbs, default=default_wbs,
                 help="Lascia vuoto per tutte le WBS del reparto selezionato",
                 placeholder="Tutte le WBS",
             )
@@ -125,8 +155,9 @@ def main():
             # ── FILTRO 3: Tipo Attività (parsed from N) ──
             st.markdown("### 🏷️ Tipo Attività")
             all_act_types = sorted(df_after_wbs[COL_ACT_TYPE].unique())
+            default_act = [a for a in saved.get("act_types", []) if a in all_act_types]
             sel_act_types = st.multiselect(
-                "Seleziona tipo attività", options=all_act_types, default=[],
+                "Seleziona tipo attività", options=all_act_types, default=default_act,
                 help="Prefisso attività (SW, HW, RI, ecc.). Lascia vuoto per tutti.",
                 placeholder="Tutti i tipi",
                 format_func=lambda t: f"{t} — {ACTIVITY_TYPES.get(t, '?')}",
@@ -139,8 +170,9 @@ def main():
             # ── FILTRO 4: Persone (H) ──
             st.markdown("### 👷 Persone")
             all_persons = sorted(df_after_act[COL_PERSON].unique())
+            default_persons = [p for p in saved.get("persone", []) if p in all_persons]
             sel_persons = st.multiselect(
-                "Seleziona persone", options=all_persons, default=[],
+                "Seleziona persone", options=all_persons, default=default_persons,
                 help="Lascia vuoto per tutte le persone",
                 placeholder="Tutte le persone",
             )
@@ -149,12 +181,25 @@ def main():
             st.markdown("### 📅 Periodo")
             date_min = df_raw[COL_DATE].min().date()
             date_max = df_raw[COL_DATE].max().date()
+            from datetime import date as _date
+            saved_start = saved.get("date_start")
+            saved_end = saved.get("date_end")
+            try:
+                val_start = _date.fromisoformat(saved_start) if saved_start else date_min
+                val_start = max(date_min, min(date_max, val_start))
+            except Exception:
+                val_start = date_min
+            try:
+                val_end = _date.fromisoformat(saved_end) if saved_end else date_max
+                val_end = max(date_min, min(date_max, val_end))
+            except Exception:
+                val_end = date_max
             _raw_date_start = st.date_input(
-                "Da", value=date_min, min_value=date_min, max_value=date_max,
+                "Da", value=val_start, min_value=date_min, max_value=date_max,
                 format="DD/MM/YYYY",
             )
             _raw_date_end = st.date_input(
-                "A", value=date_max, min_value=date_min, max_value=date_max,
+                "A", value=val_end, min_value=date_min, max_value=date_max,
                 format="DD/MM/YYYY",
             )
             # date_input può restituire None o una tuple su alcune versioni/ambienti
@@ -166,10 +211,21 @@ def main():
             # ── TARGET ──
             st.markdown("### 🎯 Target Ore")
             target = st.number_input(
-                "Inserisci target (h)", min_value=0.0, value=0.0,
+                "Inserisci target (h)", min_value=0.0, value=float(saved.get("target", 0.0)),
                 step=10.0, format="%.1f",
                 help="Ore budget previste per il confronto",
             )
+
+            # Salva i filtri correnti ad ogni interazione
+            save_filters({
+                "reparti": sel_reparti,
+                "wbs": sel_wbs,
+                "act_types": sel_act_types,
+                "persone": sel_persons,
+                "date_start": str(sel_date_start),
+                "date_end": str(sel_date_end),
+                "target": target,
+            })
 
     # ── Welcome screen quando nessun file è caricato ──
     if uploaded_file is None:
