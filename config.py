@@ -39,6 +39,9 @@ ACTIVITY_TYPES = {
     "RD":    "R&D",
     "V":     "Attività varie (archivio, DB, nuovi prodotti)",
     "GEST":  "Gestione (fornitori, offerte, DOC, manualistica)",
+    "GES":   "Gestione fornitori",
+    "AHW":   "Assistenza hardware",
+    "$POST": "Assistenza pagata",
 }
 
 # Mappa prefisso → colore esadecimale usato nei grafici Plotly.
@@ -57,5 +60,8 @@ TYPE_COLORS = {
     "RD":    "#6366f1",
     "V":     "#64748b",
     "GEST":  "#84cc16",
+    "GES":   "#65a30d",
+    "AHW":   "#0ea5e9",
+    "$POST": "#f43f5e",
     "N/D":   "#334155",
 }
