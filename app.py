@@ -74,8 +74,8 @@ st.markdown("""
 # ══════════════════════════════════════════════
 def main():
     with st.sidebar:
-        st.markdown("## ⏱️ SAP Ore Analyzer  v1.2.0")
-        st.caption("v1.2.0")
+        st.markdown("## ⏱️ SAP Ore Analyzer")
+        st.markdown("v1.2.0")
         st.markdown("---")
 
         uploaded_file = st.file_uploader(
