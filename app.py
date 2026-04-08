@@ -145,6 +145,19 @@ def main():
                 placeholder="Tutte le persone",
             )
 
+            # ── FILTRO 5: Data ──
+            st.markdown("### 📅 Periodo")
+            date_min = df_raw[COL_DATE].min().date()
+            date_max = df_raw[COL_DATE].max().date()
+            sel_date_start = st.date_input(
+                "Da", value=date_min, min_value=date_min, max_value=date_max,
+                format="DD/MM/YYYY",
+            )
+            sel_date_end = st.date_input(
+                "A", value=date_max, min_value=date_min, max_value=date_max,
+                format="DD/MM/YYYY",
+            )
+
             st.markdown("---")
 
             # ── TARGET ──
@@ -211,7 +224,7 @@ def main():
         st.stop()
 
     # ── Apply all filters ──
-    df_filtered = apply_filters(df_raw, sel_reparti, sel_wbs, sel_persons, sel_act_types)
+    df_filtered = apply_filters(df_raw, sel_reparti, sel_wbs, sel_persons, sel_act_types, sel_date_start, sel_date_end)
 
     if df_filtered.empty:
         st.warning("⚠️ Nessun dato corrisponde ai filtri selezionati.")
@@ -316,6 +329,7 @@ def main():
             df_filtered[available_display].sort_values(COL_DATE),
             use_container_width=True, height=400,
             column_config={
+                COL_DATE: st.column_config.DateColumn("Data", format="DD/MM/YYYY"),
                 COL_ACT_TYPE: st.column_config.TextColumn("Tipo Att."),
                 COL_ACT_DETAIL: st.column_config.TextColumn("Dettaglio"),
             },

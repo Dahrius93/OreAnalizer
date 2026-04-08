@@ -78,7 +78,7 @@ def load_and_clean(uploaded_file) -> pd.DataFrame:
     return df
 
 
-def apply_filters(df, reparti, wbs_list, persone, act_types):
+def apply_filters(df, reparti, wbs_list, persone, act_types, date_start=None, date_end=None):
     """Applica i filtri a cascata al DataFrame. Ogni lista vuota significa "tutti"."""
     filtered = df.copy()
     if reparti:
@@ -89,6 +89,10 @@ def apply_filters(df, reparti, wbs_list, persone, act_types):
         filtered = filtered[filtered[COL_PERSON].isin(persone)]
     if act_types:
         filtered = filtered[filtered[COL_ACT_TYPE].isin(act_types)]
+    if date_start is not None:
+        filtered = filtered[filtered[COL_DATE] >= pd.Timestamp(date_start)]
+    if date_end is not None:
+        filtered = filtered[filtered[COL_DATE] <= pd.Timestamp(date_end)]
     return filtered
 
 
