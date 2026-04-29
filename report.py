@@ -17,7 +17,7 @@ from data import _get_date_range
 
 def generate_excel_report(
     df_filtered, reparti, wbs_list, persone, act_types,
-    actual, target, figures,
+    actual, target, figures, desc_query=None,
 ):
     """Genera il report Excel multi-foglio e restituisce i byte del file.
 
@@ -42,6 +42,7 @@ def generate_excel_report(
             "Parametro": [
                 "Reparti selezionati", "WBS selezionate",
                 "Persone selezionate", "Tipi attività selezionati",
+                "Filtro descrizione",
                 "Ore Totali Reali", "Target", "Delta (Target - Reale)",
                 "Periodo dati", "Report generato il",
             ],
@@ -50,6 +51,7 @@ def generate_excel_report(
                 ", ".join(wbs_list) if wbs_list else "Tutte",
                 ", ".join(persone) if persone else "Tutte",
                 ", ".join(act_types) if act_types else "Tutti",
+                desc_query.strip() if isinstance(desc_query, str) and desc_query.strip() else "—",
                 f"{actual:.2f} h",
                 f"{target:.2f} h" if target > 0 else "Non impostato",
                 f"{target - actual:+.2f} h" if target > 0 else "N/A",

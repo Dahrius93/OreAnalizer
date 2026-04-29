@@ -78,8 +78,12 @@ def load_and_clean(uploaded_file) -> pd.DataFrame:
     return df
 
 
-def apply_filters(df, reparti, wbs_list, persone, act_types, date_start=None, date_end=None):
-    """Applica i filtri a cascata al DataFrame. Ogni lista vuota significa "tutti"."""
+def apply_filters(df, reparti, wbs_list, persone, act_types, date_start=None, date_end=None, desc_query=None):
+    """Applica i filtri a cascata al DataFrame. Ogni lista vuota significa "tutti".
+
+    desc_query: testo libero (case-insensitive) cercato come substring nella
+    descrizione attività (COL_DESC). Se None o stringa vuota, il filtro non si applica.
+    """
     filtered = df.copy()
     if reparti:
         filtered = filtered[filtered[COL_REPARTO].isin(reparti)]
@@ -99,6 +103,9 @@ def apply_filters(df, reparti, wbs_list, persone, act_types, date_start=None, da
             filtered = filtered[filtered[COL_DATE] <= pd.Timestamp(date_end)]
         except Exception:
             pass
+    if desc_query and isinstance(desc_query, str) and desc_query.strip() and COL_DESC in filtered.columns:
+        q = desc_query.strip()
+        filtered = filtered[filtered[COL_DESC].astype(str).str.contains(q, case=False, na=False, regex=False)]
     return filtered
 
 

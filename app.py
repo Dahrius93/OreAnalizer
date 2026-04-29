@@ -167,9 +167,26 @@ def main():
             if sel_act_types:
                 df_after_act = df_after_wbs[df_after_wbs[COL_ACT_TYPE].isin(sel_act_types)]
 
-            # ── FILTRO 4: Persone (H) ──
+            # ── FILTRO 4: Descrizione attività (testo libero) ──
+            st.markdown("### 🔎 Descrizione attività")
+            sel_desc_query = st.text_input(
+                "Cerca nella descrizione",
+                value=saved.get("desc_query", "") or "",
+                placeholder="Es. collaudo, QG1, fornitore…",
+                help="Ricerca case-insensitive di una sottostringa nel testo della descrizione attività (colonna N).",
+            )
+
+            df_after_desc = df_after_act
+            if sel_desc_query and sel_desc_query.strip():
+                df_after_desc = df_after_act[
+                    df_after_act[COL_DESC].astype(str).str.contains(
+                        sel_desc_query.strip(), case=False, na=False, regex=False
+                    )
+                ]
+
+            # ── FILTRO 5: Persone (H) ──
             st.markdown("### 👷 Persone")
-            all_persons = sorted(df_after_act[COL_PERSON].unique())
+            all_persons = sorted(df_after_desc[COL_PERSON].unique())
             default_persons = [p for p in saved.get("persone", []) if p in all_persons]
             sel_persons = st.multiselect(
                 "Seleziona persone", options=all_persons, default=default_persons,
@@ -177,7 +194,7 @@ def main():
                 placeholder="Tutte le persone",
             )
 
-            # ── FILTRO 5: Data ──
+            # ── FILTRO 6: Data ──
             st.markdown("### 📅 Periodo")
             date_min = df_raw[COL_DATE].min().date()
             date_max = df_raw[COL_DATE].max().date()
@@ -221,6 +238,7 @@ def main():
                 "reparti": sel_reparti,
                 "wbs": sel_wbs,
                 "act_types": sel_act_types,
+                "desc_query": sel_desc_query,
                 "persone": sel_persons,
                 "date_start": str(sel_date_start),
                 "date_end": str(sel_date_end),
@@ -283,7 +301,10 @@ def main():
         st.stop()
 
     # ── Apply all filters ──
-    df_filtered = apply_filters(df_raw, sel_reparti, sel_wbs, sel_persons, sel_act_types, sel_date_start, sel_date_end)
+    df_filtered = apply_filters(
+        df_raw, sel_reparti, sel_wbs, sel_persons, sel_act_types,
+        sel_date_start, sel_date_end, desc_query=sel_desc_query,
+    )
 
     if df_filtered.empty:
         st.warning("⚠️ Nessun dato corrisponde ai filtri selezionati.")
@@ -412,6 +433,7 @@ def main():
         sel_reparti, sel_wbs, sel_persons, sel_act_types,
         total_hours, target,
         all_figures,
+        desc_query=sel_desc_query,
     )
 
     st.download_button(
